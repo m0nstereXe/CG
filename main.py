@@ -7,6 +7,7 @@ triangulations to the (presumably unique) Delaunay triangulation via flips.
 from __future__ import annotations
 
 import argparse
+import random
 import time
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def parse_args() -> argparse.Namespace:
         help="Run cgshop2026_pyutils.verify.check_for_errors on the produced solution.",
     )
     return parser.parse_args()
+random.seed(0)
 
 
 def instance_points(instance: CGSHOP2026Instance) -> list[Point]:
@@ -55,11 +57,33 @@ def build_triangulations(
     ]
 
 
+def add_noise(
+    triangulation: FlippableTriangulation, rounds: int, probability: float
+) -> list[list[tuple[int, int]]]:
+    """Apply random non-conflicting flips to diversify the search path."""
+    noise_batches: list[list[tuple[int, int]]] = []
+    for _ in range(rounds):
+        pending_batch: list[tuple[int, int]] = []
+        for edge in triangulation.possible_flips():
+            if random.random() > probability:
+                continue
+            try:
+                triangulation.add_flip(edge)
+            except ValueError:
+                continue
+            pending_batch.append(edge)
+        if pending_batch:
+            triangulation.commit()
+            noise_batches.append(pending_batch)
+    return noise_batches
+
+
 def flip_to_delaunay(
     triangulation: FlippableTriangulation, points: list[Point]
 ) -> list[list[tuple[int, int]]]:
     """Flip all non-Delaunay edges; returns batches of concurrently flipped edges."""
     batches: list[list[tuple[int, int]]] = []
+    batches.extend(add_noise(triangulation, rounds=100, probability=0.5))
     while True:
         pending_batch: list[tuple[int, int]] = []
         for edge in triangulation.possible_flips():
