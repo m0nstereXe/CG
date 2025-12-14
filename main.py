@@ -10,7 +10,7 @@ import argparse
 import time
 from pathlib import Path
 
-from cgshop2026_pyutils.geometry import Point, FlippableTriangulation
+from cgshop2026_pyutils.geometry import Point, compute_local_delaunay_flip_batches
 from cgshop2026_pyutils.schemas import CGSHOP2026Instance, CGSHOP2026Solution
 from cgshop2026_pyutils.io import read_instance
 from cgshop2026_pyutils.verify import check_for_errors
@@ -41,96 +41,12 @@ def instance_points(instance: CGSHOP2026Instance) -> list[Point]:
     return [Point(x, y) for x, y in zip(instance.points_x, instance.points_y)]
 
 
-def build_triangulations(
-    instance: CGSHOP2026Instance, points: list[Point]
-) -> list[FlippableTriangulation]:
-    """Wrap every edge list of the instance in a FlippableTriangulation."""
-    return [
-        FlippableTriangulation.from_points_edges(points, edges)
-        for edges in instance.triangulations
-    ]
-
-
-def point_xy(p: Point) -> tuple[int, int]:
-    """Return integer coordinates of the CGAL point."""
-    return int(float(p.x())), int(float(p.y()))
-
-
-def orientation(a: Point, b: Point, c: Point) -> int:
-    """Return twice the signed area of the triangle (a,b,c)."""
-    ax, ay = point_xy(a)
-    bx, by = point_xy(b)
-    cx, cy = point_xy(c)
-    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
-
-
-def incircle(a: Point, b: Point, c: Point, d: Point) -> int:
-    """Return the determinant that is > 0 iff d lies inside circumcircle of (a,b,c) (CCW)."""
-    ax, ay = point_xy(a)
-    bx, by = point_xy(b)
-    cx, cy = point_xy(c)
-    dx, dy = point_xy(d)
-    ax -= dx
-    ay -= dy
-    bx -= dx
-    by -= dy
-    cx -= dx
-    cy -= dy
-    a_len = ax * ax + ay * ay
-    b_len = bx * bx + by * by
-    c_len = cx * cx + cy * cy
-    return (
-        a_len * (bx * cy - cx * by)
-        - b_len * (ax * cy - cx * ay)
-        + c_len * (ax * by - bx * ay)
-    )
-
-
-def violates_local_delaunay(
-    points: list[Point], edge: tuple[int, int], opposite: tuple[int, int]
-) -> bool:
-    """Check whether the shared edge fails the empty circumcircle test."""
-    a_idx, b_idx = edge
-    c_idx, d_idx = opposite
-    a, b, c, d = points[a_idx], points[b_idx], points[c_idx], points[d_idx]
-    orient = orientation(a, b, c)
-    if orient == 0:
-        return False
-    if orient < 0:
-        a, b = b, a
-    return incircle(a, b, c, d) > 0
-
-
-def flip_to_delaunay(
-    triangulation: FlippableTriangulation, points: list[Point]
-) -> list[list[tuple[int, int]]]:
-    """Flip all non-Delaunay edges; returns batches of concurrently flipped edges."""
-    batches: list[list[tuple[int, int]]] = []
-    while True:
-        pending_batch: list[tuple[int, int]] = []
-        for edge in triangulation.possible_flips():
-            opposite = triangulation.get_flip_partner(edge)
-            if violates_local_delaunay(points, edge, opposite):
-                try:
-                    triangulation.add_flip(edge)
-                except ValueError:
-                    # Another flip in this batch now conflicts with this edge.
-                    continue
-                pending_batch.append(edge)
-        if not pending_batch:
-            break
-        triangulation.commit()
-        batches.append(pending_batch)
-    return batches
-
-
 def solve_instance(instance: CGSHOP2026Instance) -> CGSHOP2026Solution:
     """Return a CGSHOP2026Solution JSONable object."""
     points = instance_points(instance)
-    triangulations = build_triangulations(instance, points)
     return CGSHOP2026Solution(
         instance_uid=instance.instance_uid,
-        flips=[flip_to_delaunay(t,points) for t in triangulations],
+        flips=compute_local_delaunay_flip_batches(points, instance.triangulations),
         meta={"algorithm": "local_delaunay_flips"},
     )
 
