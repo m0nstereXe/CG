@@ -1,1 +1,5 @@
 .venv/
+
+# CGSHOP challenge data dumps
+benchmark_instances/
+examples/
