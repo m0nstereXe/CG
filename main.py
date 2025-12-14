@@ -102,22 +102,25 @@ def violates_local_delaunay(
 
 def flip_to_delaunay(
     triangulation: FlippableTriangulation, points: list[Point]
-) -> list[tuple[int, int]]:
-    """Flip all non-Delaunay edges; returns the sequence of flipped edges."""
-    flip_log: list[tuple[int, int]] = []
+) -> list[list[tuple[int, int]]]:
+    """Flip all non-Delaunay edges; returns batches of concurrently flipped edges."""
+    batches: list[list[tuple[int, int]]] = []
     while True:
-        flipped = False
+        pending_batch: list[tuple[int, int]] = []
         for edge in triangulation.possible_flips():
             opposite = triangulation.get_flip_partner(edge)
             if violates_local_delaunay(points, edge, opposite):
-                triangulation.add_flip(edge)
-                triangulation.commit()
-                flip_log.append(edge)
-                flipped = True
-                break
-        if not flipped:
+                try:
+                    triangulation.add_flip(edge)
+                except ValueError:
+                    # Another flip in this batch now conflicts with this edge.
+                    continue
+                pending_batch.append(edge)
+        if not pending_batch:
             break
-    return flip_log
+        triangulation.commit()
+        batches.append(pending_batch)
+    return batches
 
 
 def solve_instance(instance: CGSHOP2026Instance) -> CGSHOP2026Solution:
@@ -126,8 +129,8 @@ def solve_instance(instance: CGSHOP2026Instance) -> CGSHOP2026Solution:
     triangulations = build_triangulations(instance, points)
     all_flips: list[list[list[tuple[int, int]]]] = []
     for triangulation in triangulations:
-        flip_sequence = flip_to_delaunay(triangulation, points)
-        all_flips.append([[edge] for edge in flip_sequence])
+        flip_batches = flip_to_delaunay(triangulation, points)
+        all_flips.append(flip_batches)
     return CGSHOP2026Solution(
         instance_uid=instance.instance_uid,
         flips=all_flips,
