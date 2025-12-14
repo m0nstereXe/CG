@@ -7,6 +7,7 @@ triangulations to the (presumably unique) Delaunay triangulation via flips.
 from __future__ import annotations
 
 import argparse
+import time
 from pathlib import Path
 
 from cgshop2026_pyutils.geometry import Point, FlippableTriangulation
@@ -127,15 +128,21 @@ def solve_instance(instance: CGSHOP2026Instance) -> CGSHOP2026Solution:
     """Return a CGSHOP2026Solution JSONable object."""
     points = instance_points(instance)
     triangulations = build_triangulations(instance, points)
-    all_flips: list[list[list[tuple[int, int]]]] = []
-    for triangulation in triangulations:
-        flip_batches = flip_to_delaunay(triangulation, points)
-        all_flips.append(flip_batches)
     return CGSHOP2026Solution(
         instance_uid=instance.instance_uid,
-        flips=all_flips,
+        flips=[flip_to_delaunay(t,points) for t in triangulations],
         meta={"algorithm": "local_delaunay_flips"},
     )
+
+
+def solution_metrics(solution: CGSHOP2026Solution) -> tuple[int, int]:
+    """Return total flipped edges and total parallel flip steps."""
+    total_steps = sum(len(tri_flips) for tri_flips in solution.flips)
+    total_flips = sum(
+        len(parallel_flips) for tri_flips in solution.flips for parallel_flips in tri_flips
+    )
+    return total_flips, total_steps
+
 
 def main() -> None:
     args = parse_args()
@@ -144,6 +151,7 @@ def main() -> None:
     except FileNotFoundError:
         raise SystemExit(f"Instance file not found: {args.instance}") from None
 
+    start_time = time.perf_counter()
     solution = solve_instance(instance)
     if args.verify:
         errors = check_for_errors(instance, solution, full_recompute=True)
@@ -151,8 +159,12 @@ def main() -> None:
             raise SystemExit(
                 "Solution verification failed:\n" + "\n".join(f"- {msg}" for msg in errors)
             )
-        print("Solution verified: no errors detected.")
-    print(solution.model_dump_json(indent=2))
+    elapsed = time.perf_counter() - start_time
+    total_flips, total_steps = solution_metrics(solution)
+    print(
+        f"{solution.instance_uid}: {total_flips} flips across "
+        f"{total_steps} parallel steps in {elapsed:.2f}s"
+    )
 
 
 if __name__ == "__main__":

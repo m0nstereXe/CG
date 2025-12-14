@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import time
-import zipfile
 
 from cgshop2026_pyutils.io import read_instance
 from cgshop2026_pyutils.verify import check_for_errors
+from cgshop2026_pyutils.zip.zip_writer import ZipWriter
 
-from main import solve_instance
+from main import solve_instance, solution_metrics
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,11 +48,6 @@ def json_instances(instances_dir: Path) -> list[Path]:
     )
 
 
-def entry_name(instance_uid: str) -> str:
-    """Ensure the zip member has a .json suffix."""
-    return instance_uid if instance_uid.endswith(".json") else f"{instance_uid}.json"
-
-
 def main() -> None:
     args = parse_args()
     if not args.instances_dir.exists():
@@ -65,9 +60,11 @@ def main() -> None:
         raise SystemExit(f"No .json instances found in {args.instances_dir}")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    if args.output.exists():
+        args.output.unlink()
     total = len(instance_files)
     total_start = time.perf_counter()
-    with zipfile.ZipFile(args.output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+    with ZipWriter(args.output) as archive:
         for idx, instance_path in enumerate(instance_files, start=1):
             instance_start = time.perf_counter()
             instance = read_instance(instance_path)
@@ -79,16 +76,15 @@ def main() -> None:
                         f"Verification failed for {instance_path.name}:\n"
                         + "\n".join(f"- {msg}" for msg in errors)
                     )
-            archive.writestr(
-                entry_name(solution.instance_uid),
-                solution.model_dump_json(indent=2).encode("utf-8"),
-            )
+            archive.add_solution(solution)
             instance_elapsed = time.perf_counter() - instance_start
+            total_flips, total_steps = solution_metrics(solution)
             percent = idx / total * 100
             print(
                 f"[{idx}/{total} | {percent:5.1f}%] "
-                f"Solved {instance_path.name} -> {entry_name(solution.instance_uid)} "
-                f"in {instance_elapsed:.2f}s"
+                f"Solved {instance_path.name} -> {solution.instance_uid}.solution.json "
+                f"in {instance_elapsed:.2f}s "
+                f"({total_flips} flips / {total_steps} steps)"
             )
     total_elapsed = time.perf_counter() - total_start
     print(
