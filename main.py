@@ -7,9 +7,8 @@ triangulations to the (presumably unique) Delaunay triangulation via flips.
 from __future__ import annotations
 
 import argparse
-import math
-import random
 import time
+from random import shuffle
 from pathlib import Path
 
 from cgshop2026_pyutils.geometry import (
@@ -40,87 +39,9 @@ def parse_args() -> argparse.Namespace:
         help="Run cgshop2026_pyutils.verify.check_for_errors on the produced solution.",
     )
     return parser.parse_args()
-random.seed(0)
-
-
 def instance_points(instance: CGSHOP2026Instance) -> list[Point]:
     """Convert the integer coordinate lists into Point objects."""
     return [Point(x, y) for x, y in zip(instance.points_x, instance.points_y)]
-
-
-def violating_edges(
-    triangulation: FlippableTriangulation, points: list[Point]
-) -> list[tuple[int, int]]:
-    """Return edges that fail the local Delaunay empty circumcircle test."""
-    offenders: list[tuple[int, int]] = []
-    for edge in triangulation.possible_flips():
-        opposite = triangulation.get_flip_partner(edge)
-        a_idx, b_idx = edge
-        c_idx, d_idx = opposite
-        if cgal_violates_local_delaunay(
-            points[a_idx], points[b_idx], points[c_idx], points[d_idx]
-        ):
-            offenders.append(edge)
-    return offenders
-
-
-def anneal_to_delaunay(
-    triangulation: FlippableTriangulation,
-    points: list[Point],
-    rounds: int = 200,
-    start_temp: float = 1.0,
-    end_temp: float = 0.1,
-) -> list[list[tuple[int, int]]]:
-    """Simulated annealing that tries random flips to reduce violations."""
-    anneal_log: list[list[tuple[int, int]]] = []
-    offenders = violating_edges(triangulation, points)
-    cost = len(offenders)
-    for step in range(rounds):
-        if cost == 0:
-            break
-        candidates = triangulation.possible_flips()
-
-        if not candidates:
-            break
-        #hot path start
-        temp = start_temp + (end_temp - start_temp) * (step / rounds)
-        parallel_batch: list[tuple[int, int]] = []
-        trial = triangulation.fork()
-        for edge in random.sample(candidates, len(candidates)):
-            if random.random() < 0.15:
-                chosen = edge
-            elif offenders:
-                chosen = random.choice(offenders)
-            else:
-                chosen = edge
-            if chosen in parallel_batch:
-                continue
-            try:
-                trial.add_flip(chosen)
-            except ValueError:
-                continue
-            parallel_batch.append(chosen)
-        if not parallel_batch:
-            continue
-        trial.commit()
-        new_offenders = violating_edges(trial, points)
-        new_cost = len(new_offenders)
-        delta = new_cost - cost
-        accept = False
-        #hot path end
-        if delta <= 0:
-            accept = True
-        else:
-            prob = math.exp(-delta / max(temp, 1e-6))
-            accept = random.random() < prob
-        if accept:
-            for edge in parallel_batch:
-                triangulation.add_flip(edge)
-            triangulation.commit()
-            anneal_log.append(parallel_batch)
-            offenders = new_offenders
-            cost = new_cost
-    return anneal_log
 
 
 def build_triangulations(
@@ -138,13 +59,13 @@ def flip_to_delaunay(
 ) -> list[list[tuple[int, int]]]:
     """Flip all non-Delaunay edges; returns batches of concurrently flipped edges."""
     batches: list[list[tuple[int, int]]] = []
-    batches.extend(anneal_to_delaunay(triangulation, points))
     while True:
         pending_batch: list[tuple[int, int]] = []
-        for edge in triangulation.possible_flips():
-            opposite = triangulation.get_flip_partner(edge)
+        ord = triangulation.possible_flips()
+        shuffle(ord)
+        for edge in ord:
             a_idx, b_idx = edge
-            c_idx, d_idx = opposite
+            c_idx, d_idx = triangulation.get_flip_partner(edge)
             if cgal_violates_local_delaunay(
                 points[a_idx], points[b_idx], points[c_idx], points[d_idx]
             ):
