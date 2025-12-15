@@ -7,9 +7,9 @@ triangulations to the (presumably unique) Delaunay triangulation via flips.
 from __future__ import annotations
 
 import argparse
+import math
 import random
 import time
-from collections import deque
 from pathlib import Path
 
 from cgshop2026_pyutils.geometry import (
@@ -20,9 +20,6 @@ from cgshop2026_pyutils.geometry import (
 from cgshop2026_pyutils.schemas import CGSHOP2026Instance, CGSHOP2026Solution
 from cgshop2026_pyutils.io import read_instance
 from cgshop2026_pyutils.verify import check_for_errors
-
-
-random.seed(0)
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,9 +40,87 @@ def parse_args() -> argparse.Namespace:
         help="Run cgshop2026_pyutils.verify.check_for_errors on the produced solution.",
     )
     return parser.parse_args()
+random.seed(0)
+
+
 def instance_points(instance: CGSHOP2026Instance) -> list[Point]:
     """Convert the integer coordinate lists into Point objects."""
     return [Point(x, y) for x, y in zip(instance.points_x, instance.points_y)]
+
+
+def violating_edges(
+    triangulation: FlippableTriangulation, points: list[Point]
+) -> list[tuple[int, int]]:
+    """Return edges that fail the local Delaunay empty circumcircle test."""
+    offenders: list[tuple[int, int]] = []
+    for edge in triangulation.possible_flips():
+        opposite = triangulation.get_flip_partner(edge)
+        a_idx, b_idx = edge
+        c_idx, d_idx = opposite
+        if cgal_violates_local_delaunay(
+            points[a_idx], points[b_idx], points[c_idx], points[d_idx]
+        ):
+            offenders.append(edge)
+    return offenders
+
+
+def anneal_to_delaunay(
+    triangulation: FlippableTriangulation,
+    points: list[Point],
+    rounds: int = 200,
+    start_temp: float = 1.0,
+    end_temp: float = 0.1,
+) -> list[list[tuple[int, int]]]:
+    """Simulated annealing that tries random flips to reduce violations."""
+    anneal_log: list[list[tuple[int, int]]] = []
+    offenders = violating_edges(triangulation, points)
+    cost = len(offenders)
+    for step in range(rounds):
+        if cost == 0:
+            break
+        candidates = triangulation.possible_flips()
+
+        if not candidates:
+            break
+        #hot path start
+        temp = start_temp + (end_temp - start_temp) * (step / rounds)
+        parallel_batch: list[tuple[int, int]] = []
+        trial = triangulation.fork()
+        for edge in random.sample(candidates, len(candidates)):
+            if random.random() < 0.15:
+                chosen = edge
+            elif offenders:
+                chosen = random.choice(offenders)
+            else:
+                chosen = edge
+            if chosen in parallel_batch:
+                continue
+            try:
+                trial.add_flip(chosen)
+            except ValueError:
+                continue
+            parallel_batch.append(chosen)
+        if not parallel_batch:
+            continue
+        trial.commit()
+        new_offenders = violating_edges(trial, points)
+        new_cost = len(new_offenders)
+        delta = new_cost - cost
+        accept = False
+        #hot path end
+        if delta <= 0:
+            accept = True
+        else:
+            prob = math.exp(-delta / max(temp, 1e-6))
+            accept = random.random() < prob
+        if accept:
+            for edge in parallel_batch:
+                triangulation.add_flip(edge)
+            triangulation.commit()
+            anneal_log.append(parallel_batch)
+            offenders = new_offenders
+            cost = new_cost
+    return anneal_log
 
 
 def build_triangulations(
@@ -58,260 +133,39 @@ def build_triangulations(
     ]
 
 
-def normalize_edge(u: int, v: int) -> tuple[int, int]:
-    return (u, v) if u < v else (v, u)
-
-
-def convex_hull_vertices(
-    points: list[Point], subset: set[int]
-) -> list[int]:
-    """Return the convex hull (ccw) of the provided vertex subset."""
-    coords: list[tuple[float, float, int]] = [
-        (float(points[idx].x()), float(points[idx].y()), idx) for idx in subset
-    ]
-    coords.sort()
-    if len(coords) <= 1:
-        return [coords[0][2]] if coords else []
-
-    def cross(
-        o: tuple[float, float, int],
-        a: tuple[float, float, int],
-        b: tuple[float, float, int],
-    ) -> float:
-        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-    lower: list[tuple[float, float, int]] = []
-    for pt in coords:
-        while len(lower) >= 2 and cross(lower[-2], lower[-1], pt) <= 0:
-            lower.pop()
-        lower.append(pt)
-
-    upper: list[tuple[float, float, int]] = []
-    for pt in reversed(coords):
-        while len(upper) >= 2 and cross(upper[-2], upper[-1], pt) <= 0:
-            upper.pop()
-        upper.append(pt)
-
-    hull = lower[:-1] + upper[:-1]
-    result: list[int] = []
-    for _, _, idx in hull:
-        if not result or result[-1] != idx:
-            result.append(idx)
-    return result
-
-
-def choose_hull_pair(hull: list[int]) -> tuple[int, int] | None:
-    """Pick two non-adjacent hull vertices to start/end a cut."""
-    n = len(hull)
-    if n < 4:
-        return None
-    indices = list(range(n))
-    for _ in range(64):
-        i, j = random.sample(indices, 2)
-        if abs(i - j) == 1 or abs(i - j) == n - 1:
-            continue
-        return hull[i], hull[j]
-    return None
-
-
-def build_adjacency(vertices: set[int], edges: list[tuple[int, int]]) -> dict[int, set[int]]:
-    adjacency: dict[int, set[int]] = {v: set() for v in vertices}
-    for u, v in edges:
-        if u in adjacency and v in adjacency:
-            adjacency[u].add(v)
-            adjacency[v].add(u)
-    return adjacency
-
-
-def find_interior_path(
-    adjacency: dict[int, set[int]],
-    start: int,
-    goal: int,
-    hull_edges: set[tuple[int, int]],
-) -> list[int] | None:
-    queue: deque[int] = deque([start])
-    parents: dict[int, int | None] = {start: None}
-    while queue:
-        node = queue.popleft()
-        if node == goal:
-            break
-        for neighbor in adjacency.get(node, ()):
-            edge = normalize_edge(node, neighbor)
-            if (
-                edge in hull_edges
-                and node not in (start, goal)
-                and neighbor not in (start, goal)
-            ):
-                continue
-            if neighbor in parents:
-                continue
-            parents[neighbor] = node
-            queue.append(neighbor)
-    else:
-        return None
-
-    path: list[int] = []
-    cur: int | None = goal
-    while cur is not None:
-        path.append(cur)
-        cur = parents[cur]
-    path.reverse()
-    if not path or path[0] != start or path[-1] != goal:
-        return None
-    return path
-
-
-def split_components_from_adj(
-    adjacency: dict[int, set[int]], cut_edges: set[tuple[int, int]]
-) -> list[set[int]]:
-    visited: set[int] = set()
-    components: list[set[int]] = []
-    for vertex in adjacency:
-        if vertex in visited:
-            continue
-        stack = [vertex]
-        visited.add(vertex)
-        component: set[int] = set()
-        while stack:
-            node = stack.pop()
-            component.add(node)
-            for neighbor in adjacency[node]:
-                edge = normalize_edge(node, neighbor)
-                if edge in cut_edges:
-                    continue
-                if neighbor in visited:
-                    continue
-                visited.add(neighbor)
-                stack.append(neighbor)
-        components.append(component)
-    return components
-
-
-def restricted_local_flips(
-    triangulation: FlippableTriangulation,
-    points: list[Point],
-    allowed_vertices: set[int],
+def add_noise(
+    triangulation: FlippableTriangulation, rounds: int, probability: float
 ) -> list[list[tuple[int, int]]]:
-    """Run the greedy local Delaunay loop restricted to allowed_vertices."""
-    if not allowed_vertices:
-        return []
-    batches: list[list[tuple[int, int]]] = []
-    while True:
+    """Apply random non-conflicting flips to diversify the search path."""
+    noise_batches: list[list[tuple[int, int]]] = []
+    for _ in range(rounds):
         pending_batch: list[tuple[int, int]] = []
-        candidates = triangulation.possible_flips()
-        random.shuffle(candidates)
-        for edge in candidates:
-            if edge[0] not in allowed_vertices or edge[1] not in allowed_vertices:
-                continue
-            c_idx, d_idx = triangulation.get_flip_partner(edge)
-            if c_idx not in allowed_vertices or d_idx not in allowed_vertices:
-                continue
-            if not cgal_violates_local_delaunay(
-                points[edge[0]], points[edge[1]], points[c_idx], points[d_idx]
-            ):
+        for edge in triangulation.possible_flips():
+            if random.random() > probability:
                 continue
             try:
                 triangulation.add_flip(edge)
             except ValueError:
                 continue
             pending_batch.append(edge)
-        if not pending_batch:
-            break
-        triangulation.commit()
-        batches.append(pending_batch)
-    return batches
-
-
-def try_split_component(
-    triangulation: FlippableTriangulation,
-    points: list[Point],
-    allowed_vertices: set[int],
-) -> tuple[set[int], set[int]] | None:
-    """Attempt to cut the component into two disjoint vertex sets."""
-    if len(allowed_vertices) < 6:
-        return None
-    edges = [
-        normalize_edge(*edge)
-        for edge in triangulation.get_edges()
-        if edge[0] in allowed_vertices and edge[1] in allowed_vertices
-    ]
-    if not edges:
-        return None
-    adjacency = build_adjacency(allowed_vertices, edges)
-    hull = convex_hull_vertices(points, allowed_vertices)
-    if len(hull) < 4:
-        return None
-    hull_edges = {
-        normalize_edge(hull[i], hull[(i + 1) % len(hull)]) for i in range(len(hull))
-    }
-    for _ in range(32):
-        pair = choose_hull_pair(hull)
-        if pair is None:
-            return None
-        path = find_interior_path(adjacency, pair[0], pair[1], hull_edges)
-        if not path or len(path) < 2:
-            continue
-        cut_edges = {
-            normalize_edge(path[i], path[i + 1]) for i in range(len(path) - 1)
-        }
-        components = split_components_from_adj(adjacency, cut_edges)
-        components = [comp for comp in components if comp]
-        if len(components) == 2:
-            return components[0], components[1]
-    return None
-
-
-def divide_and_conquer_batches(
-    triangulation: FlippableTriangulation, points: list[Point]
-) -> list[list[tuple[int, int]]]:
-    """Recursively split the triangulation and solve subproblems."""
-
-    def merge_disjoint_batches(
-        left: list[list[tuple[int, int]]],
-        right: list[list[tuple[int, int]]],
-    ) -> list[list[tuple[int, int]]]:
-        if not left:
-            return right
-        if not right:
-            return left
-        merged: list[list[tuple[int, int]]] = []
-        max_len = max(len(left), len(right))
-        for i in range(max_len):
-            batch: list[tuple[int, int]] = []
-            if i < len(left):
-                batch.extend(left[i])
-            if i < len(right):
-                batch.extend(right[i])
-            merged.append(batch)
-        return merged
-
-    def solve_subset(allowed_vertices: set[int]) -> list[list[tuple[int, int]]]:
-        split = try_split_component(triangulation, points, allowed_vertices)
-        if not split:
-            return restricted_local_flips(triangulation, points, allowed_vertices)
-        left, right = split
-        left_batches = solve_subset(left)
-        right_batches = solve_subset(right)
-        return merge_disjoint_batches(left_batches, right_batches)
-
-    full_vertices = set(range(len(points)))
-    return solve_subset(full_vertices)
+        if pending_batch:
+            triangulation.commit()
+            noise_batches.append(pending_batch)
+    return noise_batches
 
 
 def flip_to_delaunay(
     triangulation: FlippableTriangulation, points: list[Point]
 ) -> list[list[tuple[int, int]]]:
     """Flip all non-Delaunay edges; returns batches of concurrently flipped edges."""
-    batches: list[list[tuple[int, int]]] = divide_and_conquer_batches(
-        triangulation, points
-    )
+    batches: list[list[tuple[int, int]]] = []
+    batches.extend(add_noise(triangulation, rounds=100, probability=0.5))
     while True:
         pending_batch: list[tuple[int, int]] = []
-        ord = triangulation.possible_flips()
-        random.shuffle(ord)
-        for edge in ord:
+        for edge in triangulation.possible_flips():
+            opposite = triangulation.get_flip_partner(edge)
             a_idx, b_idx = edge
-            c_idx, d_idx = triangulation.get_flip_partner(edge)
+            c_idx, d_idx = opposite
             if cgal_violates_local_delaunay(
                 points[a_idx], points[b_idx], points[c_idx], points[d_idx]
             ):
