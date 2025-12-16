@@ -6,3 +6,217 @@ benchmark_instances/
 examples/
 solutions.zip
 __pycache__/
+
+
+#pyutil git ignore
+# Byte-compiled / optimized / DLL files
+pyutils26/__pycache__/
+pyutils26/*.py[codz]
+pyutils26/*$py.class
+
+# C extensions
+pyutils26/*.so
+
+# Distribution / packaging
+pyutils26/.Python
+pyutils26/build/
+pyutils26/develop-eggs/
+pyutils26/dist/
+pyutils26/downloads/
+pyutils26/eggs/
+pyutils26/.eggs/
+pyutils26/lib/
+pyutils26/lib64/
+pyutils26/parts/
+pyutils26/sdist/
+pyutils26/var/
+pyutils26/wheels/
+pyutils26/share/python-wheels/
+pyutils26/*.egg-info/
+pyutils26/.installed.cfg
+pyutils26/*.egg
+pyutils26/MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+pyutils26/*.manifest
+pyutils26/*.spec
+
+# Installer logs
+pyutils26/pip-log.txt
+pyutils26/pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+pyutils26/htmlcov/
+pyutils26/.tox/
+pyutils26/.nox/
+pyutils26/.coverage
+pyutils26/.coverage.*
+pyutils26/.cache
+pyutils26/nosetests.xml
+pyutils26/coverage.xml
+pyutils26/*.cover
+pyutils26/*.py.cover
+pyutils26/.hypothesis/
+pyutils26/.pytest_cache/
+pyutils26/cover/
+
+# Translations
+pyutils26/*.mo
+pyutils26/*.pot
+
+# Django stuff:
+pyutils26/*.log
+pyutils26/local_settings.py
+pyutils26/db.sqlite3
+pyutils26/db.sqlite3-journal
+
+# Flask stuff:
+pyutils26/instance/
+pyutils26/.webassets-cache
+
+# Scrapy stuff:
+pyutils26/.scrapy
+
+# Sphinx documentation
+pyutils26/docs/_build/
+
+# PyBuilder
+pyutils26/.pybuilder/
+pyutils26/target/
+
+# Jupyter Notebook
+pyutils26/.ipynb_checkpoints
+
+# IPython
+pyutils26/profile_default/
+pyutils26/ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+#poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+#pdm.lock
+#pdm.toml
+pyutils26/.pdm-python
+pyutils26/.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+#pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+pyutils26/.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+pyutils26/__pypackages__/
+
+# Celery stuff
+pyutils26/celerybeat-schedule
+pyutils26/celerybeat.pid
+
+# SageMath parsed files
+pyutils26/*.sage.py
+
+# Environments
+pyutils26/.env
+pyutils26/.envrc
+pyutils26/.venv
+pyutils26/env/
+pyutils26/venv/
+pyutils26/ENV/
+pyutils26/env.bak/
+pyutils26/venv.bak/
+
+# Spyder project settings
+pyutils26/.spyderproject
+pyutils26/.spyproject
+
+# Rope project settings
+pyutils26/.ropeproject
+
+# mkdocs documentation
+pyutils26//site
+
+# mypy
+pyutils26/.mypy_cache/
+pyutils26/.dmypy.json
+pyutils26/dmypy.json
+
+# Pyre type checker
+pyutils26/.pyre/
+
+# pytype static type analyzer
+pyutils26/.pytype/
+
+# Cython debug symbols
+pyutils26/cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+# Abstra
+# Abstra is an AI-powered process automation framework.
+# Ignore directories containing user credentials, local state, and settings.
+# Learn more at https://abstra.io/docs
+pyutils26/.abstra/
+
+# Visual Studio Code
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
+#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
+#  you could uncomment the following to ignore the entire vscode folder
+# .vscode/
+
+# Ruff stuff:
+pyutils26/.ruff_cache/
+
+# PyPI configuration file
+pyutils26/.pypirc
+
+# Cursor
+#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
+#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  refer to https://docs.cursor.com/context/ignore-files
+pyutils26/.cursorignore
+pyutils26/.cursorindexingignore
+
+# Marimo
+pyutils26/marimo/_static/
+pyutils26/marimo/_lsp/
+pyutils26/__marimo__/
+pyutils26/.conan/release
+pyutils26/_skbuild/linux-x86_64-3.12
+pyutils26/buid
+pyutils26/build_test_cmake

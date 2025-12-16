@@ -1,7 +1,0 @@
-# ninja log v7
-4	9357	1765842251162597183	src/cgshop2026_pyutils/geometry/CMakeFiles/_bindings.dir/cgal_utils.cpp.o	25f02f87985c7e14
-5	11477	1765842251162597183	src/cgshop2026_pyutils/geometry/CMakeFiles/_bindings.dir/triangulation_validation.cpp.o	9e323dfb27e824f0
-5	12017	1765842251162597183	src/cgshop2026_pyutils/geometry/CMakeFiles/_bindings.dir/geometry_operations.cpp.o	ab71919c5f0e25e0
-4	12976	1765842251162597183	src/cgshop2026_pyutils/geometry/CMakeFiles/_bindings.dir/_bindings.cpp.o	fabff68cbc88375b
-12976	14913	1765842251162597183	src/cgshop2026_pyutils/geometry/_bindings.cpython-312-x86_64-linux-gnu.so	7a338e091264fc7d
-14914	14947	1765842251162597183	CMakeFiles/install.util	af9bfc3ca01ab467
