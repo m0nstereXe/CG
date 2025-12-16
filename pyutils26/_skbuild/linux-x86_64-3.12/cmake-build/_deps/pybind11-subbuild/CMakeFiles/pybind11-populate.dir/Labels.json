@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/CMakeFiles/pybind11-populate"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/CMakeFiles/pybind11-populate.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/CMakeFiles/pybind11-populate-complete.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-build.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-configure.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-download.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-install.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-mkdir.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-patch.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-test.rule"
+		},
+		{
+			"file" : "/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-build/_deps/pybind11-subbuild/pybind11-populate-prefix/src/pybind11-populate-stamp/pybind11-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"pybind11-populate"
+		],
+		"name" : "pybind11-populate"
+	}
+}

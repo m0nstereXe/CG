@@ -1,0 +1,1 @@
+/common/home/ndb68/CG/pyutils26/_skbuild/linux-x86_64-3.12/cmake-install/src/cgshop2026_pyutils/geometry/_bindings.cpython-312-x86_64-linux-gnu.so
