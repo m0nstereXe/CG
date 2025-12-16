@@ -4,7 +4,20 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 import time
+
+REPO_ROOT = Path(__file__).resolve().parent
+PYUTILS_SRC = REPO_ROOT / "pyutils26" / "src"
+if PYUTILS_SRC.exists() and str(PYUTILS_SRC) not in sys.path:
+    sys.path.insert(0, str(PYUTILS_SRC))
+VENV_SITE = (
+    REPO_ROOT
+    / ".venv"
+    / f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+)
+if VENV_SITE.exists() and str(VENV_SITE) not in sys.path:
+    sys.path.insert(0, str(VENV_SITE))
 
 from cgshop2026_pyutils.io import read_instance
 from cgshop2026_pyutils.verify import check_for_errors
